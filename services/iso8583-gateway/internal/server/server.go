@@ -62,17 +62,14 @@ func (server *Server) acceptConnection() {
 		}
 		zap.L().Info("New connection accepted", zap.String("remote_addr", conn.RemoteAddr().String()))
 		inboundChan := make(chan *domain.ISO8583Message, 200)
-		server.wg.Add(2)
 		reader := handler.NewISO8583Reader(conn, server.ctx, inboundChan)
 		inboundService := service.NewInboundService(server.ctx, inboundChan, server.cfg, server.producer)
+		server.wg.Add(1)
 		go func() {
 			defer server.wg.Done()
 			reader.Read()
 		}()
-		go func() {
-			defer server.wg.Done()
-			inboundService.Start()
-		}()
+		go inboundService.ProcessInbound()
 	}
 }
 

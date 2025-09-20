@@ -1,12 +1,14 @@
 package config
 
 import (
+	"iso8583-gateway/pkg/util"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
@@ -36,11 +38,19 @@ type KafkaConfig struct {
 type ApplicationConfig struct {
 	WorkerPerConnection int
 	InboundRequestTopic string
+	ServiceID           string
 }
 
 func Init() *Config {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
+	}
+	var serviceID string
+	id, err := uuid.NewUUID()
+	if err != nil {
+		serviceID = util.RandomString(36)
+	} else {
+		serviceID = id.String()
 	}
 	return &Config{
 		Logger: &LoggerConfig{
@@ -59,6 +69,7 @@ func Init() *Config {
 		Application: &ApplicationConfig{
 			WorkerPerConnection: getEnvAsInt("APP_WORKER_PER_CONNECTION", 10),
 			InboundRequestTopic: getEnv("APP_INBOUND_REQUEST_TOPIC", "transfer.inbound.request"),
+			ServiceID:           serviceID,
 		},
 	}
 }
