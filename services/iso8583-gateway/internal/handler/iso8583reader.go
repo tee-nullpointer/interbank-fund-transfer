@@ -3,12 +3,14 @@ package handler
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"iso8583-gateway/internal/domain"
 	"iso8583-gateway/pkg/util"
 	"net"
 	"strconv"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -38,6 +40,10 @@ func (reader *ISO8583Reader) Read() {
 		}
 		msgLen, err := reader.readMessageLength(r, remoteAddress)
 		if err != nil {
+			var ne net.Error
+			if errors.As(err, &ne) && ne.Timeout() {
+				continue
+			}
 			return
 		}
 		msg, err := reader.readMessage(r, remoteAddress, msgLen)
@@ -60,8 +66,17 @@ func (reader *ISO8583Reader) isShuttingDown() bool {
 
 func (reader *ISO8583Reader) readMessageLength(r *bufio.Reader, remoteAddress string) (int, error) {
 	lenBuf := make([]byte, 4)
-	_, err := io.ReadFull(r, lenBuf)
+	err := reader.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 	if err != nil {
+		zap.L().Error("Error setting read deadline", zap.String("remote_addr", remoteAddress), zap.Error(err))
+		return 0, err
+	}
+	_, err = io.ReadFull(r, lenBuf)
+	if err != nil {
+		var ne net.Error
+		if errors.As(err, &ne) && ne.Timeout() {
+			return 0, err
+		}
 		zap.L().Info("Client disconnected", zap.String("remote_addr", remoteAddress))
 		return 0, err
 	}
