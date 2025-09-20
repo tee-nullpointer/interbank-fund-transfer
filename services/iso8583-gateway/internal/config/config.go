@@ -36,7 +36,6 @@ type KafkaConfig struct {
 }
 
 type ApplicationConfig struct {
-	WorkerPerConnection int
 	InboundRequestTopic string
 	ServiceID           string
 }
@@ -67,7 +66,6 @@ func Init() *Config {
 			Timeout: getEnvAsDuration("KAFKA_TIMEOUT", 5*time.Second),
 		},
 		Application: &ApplicationConfig{
-			WorkerPerConnection: getEnvAsInt("APP_WORKER_PER_CONNECTION", 10),
 			InboundRequestTopic: getEnv("APP_INBOUND_REQUEST_TOPIC", "transfer.inbound.request"),
 			ServiceID:           serviceID,
 		},
